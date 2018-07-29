@@ -36,8 +36,32 @@ class NintendoLoginData(common.Data):
 	def save(self, stream):
 		stream.string(self.token)
 common.DataHolder.register(NintendoLoginData, "NintendoLoginData")
-	
-	
+
+
+class AccountExtraInfo(common.Data):
+	def __init__(self, unk_u32_1, unk_u32_2, unk_u32_3, token):
+		self.unk_u32_1 = unk_u32_1
+		self.unk_u32_2 = unk_u32_2
+		self.unk_u32_3 = unk_u32_3
+		self.token = token
+
+	def get_name(self):
+		return "AccountExtraInfo"
+
+	def save(self, stream):
+		stream.u32(self.unk_u32_1)
+		stream.u32(self.unk_u32_2)
+		stream.u32(self.unk_u32_3)
+		stream.string(self.token)
+
+	def load(self, stream):
+		self.unk_u32_1 = stream.u32()
+		self.unk_u32_2 = stream.u32()
+		self.unk_u32_3 = stream.u32()
+		self.token = stream.string()
+common.DataHolder.register(AccountExtraInfo, "AccountExtraInfo")
+
+
 class RVConnectionData(common.Structure):
 	def get_version(self):
 		return 1

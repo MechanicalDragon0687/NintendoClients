@@ -7,11 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 class NotificationType:
+	FRIEND_REQUEST_COMPLETE = 7
 	LOGOUT = 10
 	PRESENCE_CHANGE = 24
 	UNFRIENDED = 26
 	STATUS_CHANGE = 33
-
 
 class NintendoNotificationEventGeneral(common.Data):
 	def get_name(self):
