@@ -496,3 +496,252 @@ class FriendsClient:
 		#--- response ---
 		self.client.get_response(call_id)
 		logger.info("Friends.update_presence -> done")
+
+class Friends3DSClient:
+	METHOD_UPDATE_PROFILE = 0x01
+	METHOD_UPDATE_MII =  0x02
+	METHOD_UPDATE_MII_LIST = 0x03
+	METHOD_UPDATE_PLAYED_GAMES = 0x04
+	METHOD_UPDATE_PREFERENCE = 0x05
+	METHOD_GET_FRIEND_MII = 0x06
+	# 0x07?
+	# 0x08?
+	# 0x09?
+	METHOD_GET_FRIEND_RELATIONSHIPS = 0x0a
+	METHOD_ADD_FRIEND_BY_PRINCIPAL_ID = 0x0b
+	# 0x0c?
+	# 0x0d?
+	METHOD_REMOVE_FRIEND = 0x0e
+	METHOD_GET_ALL_FRIENDS = 0x0f
+	# 0x10?
+	METHOD_SYNC_FRIEND = 0x11
+	METHOD_UPDATE_PRESENCE = 0x12
+	METHOD_UPDATE_FAVORITE_GAME_KEY = 0x13
+	METHOD_UPDATE_COMMENT = 0x14
+	# 0x15?
+	METHOD_GET_FRIEND_PRESENCE = 0x16
+	# 0x17?
+	METHOD_GET_FRIEND_PICTURE = 0x18
+	METHOD_GET_FRIEND_PERSISTENT_INFO = 0x19
+	# 0x1a?
+
+	PROTOCOL_ID = 0x65
+
+	def __init__(self, backend):
+		self.client = backend.secure_client
+
+	# (1) UpdateProfile
+	# takes a MyProfile
+	def update_profile(self, profile):
+		logger.info("Friends.update_profile()")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_UPDATE_PROFILE)
+		stream.add(profile)
+		self.client.send_message(stream)
+
+		#--- response ---
+		self.client.get_response(call_id)
+		logger.info("Friends.update_profile -> done")
+
+	# (2) UpdateMii
+	# takes a MiiV1
+	def update_mii(self, mii):
+		logger.info("Friends.update_profile()")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_UPDATE_MII)
+		stream.add(mii)
+		self.client.send_message(stream)
+
+		#--- response ---
+		self.client.get_response(call_id)
+		logger.info("Friends.update_profile -> done")
+
+	# (3) UpdateMiiList
+	# takes a MiiList
+	def update_mii_list(self, mii_list):
+		logger.info("Friends.update_mii_list()")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_UPDATE_MII_LIST)
+		stream.add(mii_list)
+		self.client.send_message(stream)
+
+		#--- response ---
+		self.client.get_response(call_id)
+		logger.info("Friends.update_mii_list -> done")
+
+	# (4) UpdatePlayedGames
+	# takes a list of PlayedGames
+	def update_played_games(self, played_games):
+		logger.info("Friends.update_played_games()")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_UPDATE_PLAYED_GAMES)
+		stream.list(played_games, lambda a: stream.add(a))
+		self.client.send_message(stream)
+
+		#--- response ---
+		self.client.get_response(call_id)
+		logger.info("Friends.update_played_games -> done")
+
+	# (5) UpdatePreference
+	def update_preference(self, pref_a, pref_b, pref_c):
+		logger.info("Friends.update_preference()")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_UPDATE_PREFERENCE)
+		stream.bool(pref_a)
+		stream.bool(pref_b)
+		stream.bool(pref_c)
+		self.client.send_message(stream)
+
+		#--- response ---
+		self.client.get_response(call_id)
+		logger.info("Friends.update_preference -> done")
+
+	# (10) GetFriendRelationships
+	def get_friend_relationships(self, pid_list):
+		logger.info("Friends.get_friend_relationships()")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_GET_FRIEND_RELATIONSHIPS)
+		stream.list(pid_list, stream.u32)
+		self.client.send_message(stream)
+
+		#--- response ---
+		stream = self.client.get_response(call_id)
+		relationships = stream.list(lambda: stream.extract(FriendRelationship))
+		logger.info("Friends.get_friend_relationships -> done")
+		return relationships
+
+	# (11) AddFriendByPrincipalId
+	def add_friend_by_principal_id(self, friend_seed, pid):
+		logger.info("Friends.add_friend_by_principal_id()")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_ADD_FRIEND_BY_PRINCIPAL_ID)
+		stream.u64(friend_seed)
+		stream.u32(pid)
+		self.client.send_message(stream)
+
+		#--- response ---
+		stream = self.client.get_response(call_id)
+		rel = stream.extract(FriendRelationship)
+		logger.info("Friends.add_friend_by_principal_id -> done")
+		return rel
+
+	# (14) RemoveFriend
+	def remove_friend(self, principal_id):
+		logger.info("Friends.remove_friend()")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_REMOVE_FRIEND)
+		stream.u32(principal_id)
+		self.client.send_message(stream)
+
+		#--- response ---
+		stream = self.client.get_response(call_id)
+		logger.info("Friends.remove_friend -> done")
+
+	# (15) GetAllFriends
+	def get_all_friends(self):
+		logger.info("Friends.get_all_friends()")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_GET_ALL_FRIENDS)
+		self.client.send_message(stream)
+
+		#--- response ---
+		stream = self.client.get_response(call_id)
+		friends = stream.list(lambda: stream.extract(FriendRelationship))
+		logger.info("Friends.get_all_friends -> done")
+		return friends
+
+	# (17) SyncFriend
+	def sync_friend(self, friend_seed, principal_ids, always_empty):
+		logger.info("Friends.sync_friend()")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_SYNC_FRIEND)
+		stream.u64(friend_seed)
+		stream.list(principal_ids, stream.u32)
+		stream.list(always_empty, stream.u32)
+		self.client.send_message(stream)
+
+		#--- response ---
+		stream = self.client.get_response(call_id)
+		friends = stream.list(lambda: stream.extract(FriendRelationship))
+		logger.info("Friends.sync_friend -> done")
+		return friends
+
+	# (18) UpdatePresence
+	# takes a NintendoPresence as well as a boolean to show played game
+	def update_presence(self, presence, unk):
+		logger.info("Friends.update_presence(...)")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_UPDATE_PRESENCE)
+		stream.add(presence)
+		stream.bool(unk)
+		self.client.send_message(stream)
+
+		#--- response ---
+		self.client.get_response(call_id)
+		logger.info("Friends.update_presence -> done")
+
+	# (19) UpdateFavoriteGameKey
+	def update_favorite_game_key(self, game_key):
+		logger.info("Friends.update_favorite_game_key(...)")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_UPDATE_FAVORITE_GAME_KEY)
+		stream.add(game_key)
+		self.client.send_message(stream)
+
+		#--- response ---
+		self.client.get_response(call_id)
+		logger.info("Friends.update_favorite_game_key -> done")
+
+	# (20) UpdateComment
+	def update_comment(self, comment):
+		logger.info("Friends.update_comment(...)")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_UPDATE_COMMENT)
+		stream.string(comment)
+		self.client.send_message(stream)
+
+		#--- response ---
+		self.client.get_response(call_id)
+		logger.info("Friends.update_comment -> done")
+
+	# (22) GetFriendPresence
+	def get_friend_presence(self, principal_ids):
+		logger.info("Friends.get_friend_presence(...)")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_GET_FRIEND_PRESENCE)
+		stream.list(principal_ids, stream.u32)
+		self.client.send_message(stream)
+
+		#--- response ---
+		stream = self.client.get_response(call_id)
+		presences = stream.list(lambda: stream.extract(FriendPresence))
+		logger.info("Friends.get_friend_presence -> done")
+		return presences
+
+	# (24) GetFriendPicture
+	def get_friend_picture(self, principal_ids):
+		logger.info("Friends.get_friend_picture(...)")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_GET_FRIEND_PICTURE)
+		stream.list(principal_ids, stream.u32)
+		self.client.send_message(stream)
+
+		#--- response ---
+		stream = self.client.get_response(call_id)
+		pictures = stream.list(lambda: stream.extract(FriendPicture))
+		logger.info("Friends.get_friend_picture -> done")
+		return pictures
+
+	# (25) GetFriendPersistentInfo
+	def get_friend_persistent_info(self, principal_ids):
+		logger.info("Friends.get_friend_persistent_info(...)")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_GET_FRIEND_PERSISTENT_INFO)
+		stream.list(principal_ids, stream.u32)
+		self.client.send_message(stream)
+
+		#--- response ---
+		stream = self.client.get_response(call_id)
+		infos = stream.list(lambda: stream.extract(FriendPersistentInfo))
+		logger.info("Friends.get_friend_persistent_info -> done")
+		return infos
