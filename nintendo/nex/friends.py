@@ -156,7 +156,7 @@ class NintendoPresenceV1(common.Data):
 
 	def save(self, stream):
 		stream.u32(self.unk_u32_1)
-		self.game_key.save(stream)
+		self.stream.add(self.game_key)
 		stream.string(self.message)
 		stream.u32(self.unk_u32_2)
 		stream.u8(self.unk_u8)
@@ -385,7 +385,7 @@ class FriendPersistentInfo(common.Data):
 		stream.u8(self.unk_u8_3)
 		stream.u8(self.unk_u8_4)
 		stream.u8(self.unk_u8_5)
-		self.game_key.save(stream)
+		stream.add(self.game_key)
 		stream.string(self.status)
 		stream.datetime(self.unk_timestamp_1)
 		stream.datetime(self.unk_timestamp_2)
@@ -403,7 +403,7 @@ class FriendPresence(common.Data):
 
 	def save(self, stream):
 		stream.u32(self.pid)
-		self.nintendo_presence.save(stream)
+		stream.add(self.nintendo_presence)
 
 	def load(self, stream):
 		self.pid = stream.u32()
