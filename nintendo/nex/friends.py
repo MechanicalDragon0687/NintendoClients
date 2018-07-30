@@ -64,18 +64,37 @@ class MiiV2(common.Data):
 		stream.string(self.name)
 		stream.u8(self.unk1)
 		stream.u8(self.unk2)
-		stream.buffer(self.data.build())
+		#stream.buffer(self.data.build())
+		stream.buffer(self.data)
 		stream.datetime(self.datetime)
 	
 	def load(self, stream):
 		self.name = stream.string()
 		self.unk1 = stream.u8()
 		self.unk2 = stream.u8()
-		self.data = miis.MiiData.parse(stream.buffer())
+		#self.data = miis.MiiData.parse(stream.buffer())
+		self.data = stream.buffer()
 		self.datetime = stream.datetime()
 common.DataHolder.register(MiiV2, "MiiV2")
 
-	
+class FriendMii(common.Data):
+	def __init__(self, pid, mii):
+		self.pid = pid
+		self.mii = mii
+
+	def get_name(self):
+		return "FriendMii"
+
+	def load(self, stream):
+		self.pid = stream.u32()
+		self.mii = stream.extract(MiiV2)
+
+	def save(self, stream):
+		stream.u32(self.pid)
+		stream.add(self.mii)
+
+common.DataHolder.register(FriendMii, "FriendMii")
+
 class PrincipalBasicInfo(common.Data):
 	def __init__(self, pid, nnid, mii, unk):
 		self.pid = pid
@@ -139,8 +158,8 @@ class GameKey(common.Data):
 common.DataHolder.register(GameKey, "GameKey")
 
 class NintendoPresenceV1(common.Data):
-	def __init__(self, unk_u32_1, game_key, message, unk_u32_2, unk_u8, unk_u32_3, unk_u32_4, unk_u32_5, unk_u32_6, unk_buffer):
-		self.unk_u32_1 = unk_u32_1
+	def __init__(self, updated_bitmask, game_key, message, unk_u32_2, unk_u8, unk_u32_3, unk_u32_4, unk_u32_5, unk_u32_6, unk_buffer):
+		self.updated_bitmask = updated_bitmask
 		self.game_key = game_key
 		self.message = message
 		self.unk_u32_2 = unk_u32_2
@@ -155,8 +174,8 @@ class NintendoPresenceV1(common.Data):
 		return "NintendoPresence"
 
 	def save(self, stream):
-		stream.u32(self.unk_u32_1)
-		self.stream.add(self.game_key)
+		stream.u32(self.updated_bitmask)
+		stream.add(self.game_key)
 		stream.string(self.message)
 		stream.u32(self.unk_u32_2)
 		stream.u8(self.unk_u8)
@@ -167,7 +186,7 @@ class NintendoPresenceV1(common.Data):
 		stream.buffer(self.unk_buffer)
 
 	def load(self, stream):
-		self.unk_u32_1 = stream.u32()
+		self.updated_bitmask = stream.u32()
 		self.game_key = stream.extract(GameKey)
 		self.message = stream.string()
 		self.unk_u32_2 = stream.u32()
@@ -420,7 +439,9 @@ class FriendPicture:
 		return "FriendPicture"
 
 	def save(self, stream):
-		raise NotImplementedError("no")
+		stream.u32(self.unk_u32)
+		stream.buffer(self.data)
+		stream.datetime(self.timestamp)
 
 	def load(self, stream):
 		self.unk_u32 = data.u32()
@@ -430,12 +451,12 @@ class FriendPicture:
 common.DataHolder.register(FriendPicture, "FriendPicture")
 
 class MyProfile(common.Data):
-	def __init__(self, unk_u8_1, unk_u8_2, unk_u8_3, unk_u8_4, unk_u8_5, unk_u64, unk_string_1, unk_string_2):
-		self.unk_u8_1 = unk_u8_1
-		self.unk_u8_2 = unk_u8_2
-		self.unk_u8_3 = unk_u8_3
-		self.unk_u8_4 = unk_u8_4
-		self.unk_u8_5 = unk_u8_5
+	def __init__(self, region, country, area, language, platform, unk_u64, unk_string_1, unk_string_2):
+		self.region = region
+		self.country = country
+		self.area = area
+		self.language = language
+		self.platform = platform
 		self.unk_u64 = unk_u64
 		self.unk_string_1 = unk_string_1
 		self.unk_string_2 = unk_string_2
@@ -443,12 +464,22 @@ class MyProfile(common.Data):
 	def get_name(self):
 		return "MyProfile"
 
-	def streamout(self, stream):
-		self.unk_u8_1 = stream.u8()
-		self.unk_u8_2 = stream.u8()
-		self.unk_u8_3 = stream.u8()
-		self.unk_u8_4 = stream.u8()
-		self.unk_u8_5 = stream.u8()
+	def save(self, stream):
+		stream.u8(self.region)
+		stream.u8(self.country)
+		stream.u8(self.area)
+		stream.u8(self.language)
+		stream.u8(self.platform)
+		stream.u64(self.unk_u64)
+		stream.string(self.unk_string_1)
+		stream.string(self.unk_string_2)
+
+	def load(self, stream):
+		self.region = stream.u8()
+		self.country = stream.u8()
+		self.area = stream.u8()
+		self.language = stream.u8()
+		self.platform = stream.u8()
 		self.unk_u64 = stream.u64()
 		self.unk_string_1 = stream.string()
 		self.unk_string_2 = stream.string()
@@ -595,6 +626,21 @@ class Friends3DSClient:
 		#--- response ---
 		self.client.get_response(call_id)
 		logger.info("Friends.update_preference -> done")
+
+	# (6) GetFriendMii
+	def get_friend_mii(self, pid_list):
+		logger.info("Friends.get_friend_mii()")
+		#--- request ---
+		stream, call_id = self.client.init_request(self.PROTOCOL_ID, self.METHOD_GET_FRIEND_MII)
+		stream.list(pid_list, stream.u32)
+		stream.u64(0)
+		self.client.send_message(stream)
+
+		#--- response ---
+		stream = self.client.get_response(call_id)
+		miis = stream.list(lambda: stream.extract(FriendMii))
+		logger.info("Friends.get_friend_mii -> done")
+		return miis
 
 	# (10) GetFriendRelationships
 	def get_friend_relationships(self, pid_list):
